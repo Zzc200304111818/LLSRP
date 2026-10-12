@@ -1,7 +1,7 @@
 package com.zzc.utils;
 
 /**
- * @author 虎哥
+ * @author 成哥
  */
 public abstract class RegexPatterns {
     /**

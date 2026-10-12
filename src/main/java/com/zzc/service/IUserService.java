@@ -8,7 +8,7 @@ import com.zzc.entity.User;
  *  服务类
  * </p>
  *
- * @author 虎哥
+ * @author 成哥
  * @since 2021-12-22
  */
 public interface IUserService extends IService<User> {
