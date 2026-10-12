@@ -1,7 +1,10 @@
 package com.zzc.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.zzc.dto.Result;
 import com.zzc.entity.User;
+
+import javax.servlet.http.HttpSession;
 
 /**
  * <p>
@@ -13,4 +16,5 @@ import com.zzc.entity.User;
  */
 public interface IUserService extends IService<User> {
 
+    Result sendCode(String phone, HttpSession session);
 }
