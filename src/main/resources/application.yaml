@@ -21,7 +21,7 @@ spring:
   jackson:
     default-property-inclusion: non_null # JSON处理时忽略非空字段
 mybatis-plus:
-  type-aliases-package: com.llsrp.entity # 别名扫描包
+  type-aliases-package: com.zzc.entity # 别名扫描包
 logging:
   level:
-    com.llsrp: debug
+    com.zzc: debug
