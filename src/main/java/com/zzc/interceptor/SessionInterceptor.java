@@ -1,5 +1,6 @@
 package com.zzc.interceptor;
 
+import com.zzc.dto.UserDTO;
 import com.zzc.entity.User;
 import com.zzc.utils.UserHolder;
 import lombok.extern.slf4j.Slf4j;
@@ -23,7 +24,7 @@ public class SessionInterceptor implements HandlerInterceptor {
             Object user = session.getAttribute("user");
             if (user != null) {
                 // 3.用户存在，保存到ThreadLocal
-                UserHolder.saveUser((User) user);
+                UserHolder.saveUser((UserDTO) user);
                 log.info("SESSION有效，用户：{}", user);
                 return true;
             }

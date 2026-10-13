@@ -3,9 +3,12 @@ package com.zzc.controller;
 
 import com.zzc.dto.LoginFormDTO;
 import com.zzc.dto.Result;
+import com.zzc.dto.UserDTO;
+import com.zzc.entity.User;
 import com.zzc.entity.UserInfo;
 import com.zzc.service.IUserInfoService;
 import com.zzc.service.IUserService;
+import com.zzc.utils.UserHolder;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
@@ -62,8 +65,9 @@ public class UserController {
 
     @GetMapping("/me")
     public Result me(){
-        // TODO 获取当前登录的用户并返回
-        return Result.fail("功能未完成");
+        // 获取当前登录的用户并返回
+        UserDTO user = UserHolder.getUser();
+        return Result.ok(user);
     }
 
     @GetMapping("/info/{id}")

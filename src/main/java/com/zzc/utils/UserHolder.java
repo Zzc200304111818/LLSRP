@@ -1,15 +1,15 @@
 package com.zzc.utils;
 
-import com.zzc.entity.User;
+import com.zzc.dto.UserDTO;
 
 public class UserHolder {
-    private static final ThreadLocal<User> tl = new ThreadLocal<>();
+    private static final ThreadLocal<UserDTO> tl = new ThreadLocal<>();
 
-    public static void saveUser(User user){
+    public static void saveUser(UserDTO user){
         tl.set(user);
     }
 
-    public static User getUser(){
+    public static UserDTO getUser(){
         return tl.get();
     }
 

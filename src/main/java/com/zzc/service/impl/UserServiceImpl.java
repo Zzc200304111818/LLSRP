@@ -1,11 +1,13 @@
 package com.zzc.service.impl;
 
+import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.util.RandomUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.zzc.dto.LoginFormDTO;
 import com.zzc.dto.Result;
+import com.zzc.dto.UserDTO;
 import com.zzc.entity.User;
 import com.zzc.mapper.UserMapper;
 import com.zzc.service.IUserService;
@@ -80,7 +82,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
             userMapper.insert(user);
         }
         // 8.保存用户信息到session
-        session.setAttribute("user", user);
+        UserDTO userDTO = BeanUtil.copyProperties(user, UserDTO.class);
+        session.setAttribute("user", userDTO);
         return Result.ok();
     }
 }
