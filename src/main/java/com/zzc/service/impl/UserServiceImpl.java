@@ -67,8 +67,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
             return Result.fail("验证码错误！");
         }
         // 6.查询数据库此手机号是否已注册
-        LambdaQueryWrapper<User> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(User::getPhone, phone);
+        QueryWrapper<User> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("phone", phone);
         User user = userMapper.selectOne(queryWrapper);
         if (user == null) {
             // 7.用户不存在进行注册
