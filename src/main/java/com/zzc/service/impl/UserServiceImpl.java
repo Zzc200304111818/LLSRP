@@ -45,8 +45,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
     private StringRedisTemplate stringRedisTemplate;
 
     @Override
-    public Result sendCode(String phone, HttpSession session) {
-        log.debug("/user/code JSESSIONID: {}", session.getId());
+    public Result sendCode(String phone) {
         // 1.校验手机号
         if (RegexUtils.isPhoneInvalid(phone)) {
             // 2.非法，返回fail
@@ -65,8 +64,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
     }
 
     @Override
-    public Result login(LoginFormDTO loginForm, HttpSession session) {
-        log.debug("/user/login JSESSIONID: {}", session.getId());
+    public Result login(LoginFormDTO loginForm) {
         // 1.解析参数
         String phone = loginForm.getPhone();
         String password = loginForm.getPassword();
