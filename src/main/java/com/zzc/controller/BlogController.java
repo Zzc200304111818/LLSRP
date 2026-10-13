@@ -3,7 +3,6 @@ package com.zzc.controller;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.zzc.dto.Result;
-import com.zzc.dto.UserDTO;
 import com.zzc.entity.Blog;
 import com.zzc.entity.User;
 import com.zzc.service.IBlogService;
@@ -35,7 +34,7 @@ public class BlogController {
     @PostMapping
     public Result saveBlog(@RequestBody Blog blog) {
         // 获取登录用户
-        UserDTO user = UserHolder.getUser();
+        User user = UserHolder.getUser();
         blog.setUserId(user.getId());
         // 保存探店博文
         blogService.save(blog);
@@ -54,7 +53,7 @@ public class BlogController {
     @GetMapping("/of/me")
     public Result queryMyBlog(@RequestParam(value = "current", defaultValue = "1") Integer current) {
         // 获取登录用户
-        UserDTO user = UserHolder.getUser();
+        User user = UserHolder.getUser();
         // 根据用户查询
         Page<Blog> page = blogService.query()
                 .eq("user_id", user.getId()).page(new Page<>(current, SystemConstants.MAX_PAGE_SIZE));

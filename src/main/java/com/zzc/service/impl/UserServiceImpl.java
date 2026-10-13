@@ -10,6 +10,7 @@ import com.zzc.entity.User;
 import com.zzc.mapper.UserMapper;
 import com.zzc.service.IUserService;
 import com.zzc.utils.RegexUtils;
+import com.zzc.utils.SystemConstants;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -74,12 +75,12 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
             // 7.用户不存在进行注册
             user = new User();
             user.setPhone(phone);
-            user.setNickName("user_" + RandomUtil.randomString(10));
+            user.setNickName(SystemConstants.USER_NICK_NAME_PREFIX + RandomUtil.randomString(10));
             user.setPassword(password);
             userMapper.insert(user);
         }
         // 8.保存用户信息到session
         session.setAttribute("user", user);
-        return Result.ok("登录成功");
+        return Result.ok();
     }
 }
