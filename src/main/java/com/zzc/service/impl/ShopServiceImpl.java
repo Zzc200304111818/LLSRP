@@ -12,6 +12,8 @@ import org.springframework.stereotype.Service;
 import javax.annotation.Resource;
 import java.util.concurrent.TimeUnit;
 
+import static com.zzc.utils.RedisConstants.CACHE_SHOP_TTL;
+
 /**
  * <p>
  *  服务实现类
@@ -35,10 +37,19 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
             Shop shop = getById(id);
             if (shop != null) {
                 // 3.写入redis缓存
-                stringRedisTemplate.opsForValue().set(shopKey, JSONUtil.toJsonStr(shop), RedisConstants.CACHE_SHOP_TTL, TimeUnit.MINUTES);
+                stringRedisTemplate.opsForValue().set(shopKey, JSONUtil.toJsonStr(shop), CACHE_SHOP_TTL, TimeUnit.MINUTES);
             }
             return shop;
         }
         return JSONUtil.toBean(shopJson, Shop.class);
+    }
+
+    @Override
+    public void updateShop(Shop shop) {
+        // 1.先更新数据库
+        updateById(shop);
+        // 2.再删缓存
+        String shopKey = RedisConstants.CACHE_SHOP_PREFIX + shop.getId();
+        stringRedisTemplate.delete(shopKey);
     }
 }
