@@ -58,7 +58,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
 /*        // 5.session存储验证码进行登录校验
         session.setAttribute("code", code);*/
         // 5.redis存储验证码
-        stringRedisTemplate.opsForValue().set(LOGIN_CODE_KEY + phone, code, LOGIN_CODE_TTL, TimeUnit.MINUTES);
+        stringRedisTemplate.opsForValue().set(LOGIN_CODE_PREFIX + phone, code, LOGIN_CODE_TTL, TimeUnit.MINUTES);
         // 6.返回ok
         return Result.ok();
     }
@@ -77,7 +77,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
 /*        // 4.校验验证码
         Object cacheCode = session.getAttribute("code");*/
         // 4.校验验证码
-        String cacheCode = stringRedisTemplate.opsForValue().get(LOGIN_CODE_KEY + phone);
+        String cacheCode = stringRedisTemplate.opsForValue().get(LOGIN_CODE_PREFIX + phone);
         if (RegexUtils.isCodeInvalid(code) || !code.equals(cacheCode)) {
             // 5.非法，返回fail
             return Result.fail("验证码错误！");
@@ -107,7 +107,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
                         .setIgnoreNullValue(true)
                         .setFieldValueEditor((k, v) -> String.valueOf(v))
         );
-        String userKey = LOGIN_USER_KEY + token;
+        String userKey = LOGIN_USER_PREFIX + token;
         // 此处非原子操作，存在并发安全
         stringRedisTemplate.opsForHash().putAll(userKey, userMap);
         stringRedisTemplate.expire(userKey, LOGIN_USER_TTL, TimeUnit.MINUTES);

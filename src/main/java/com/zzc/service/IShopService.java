@@ -1,5 +1,6 @@
 package com.zzc.service;
 
+import com.zzc.dto.Result;
 import com.zzc.entity.Shop;
 import com.baomidou.mybatisplus.extension.service.IService;
 
@@ -13,4 +14,5 @@ import com.baomidou.mybatisplus.extension.service.IService;
  */
 public interface IShopService extends IService<Shop> {
 
+    Shop getFromCacheById(Long id);
 }

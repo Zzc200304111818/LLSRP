@@ -33,7 +33,8 @@ public class ShopController {
      */
     @GetMapping("/{id}")
     public Result queryShopById(@PathVariable("id") Long id) {
-        return Result.ok(shopService.getById(id));
+        Shop shopInfo = shopService.getFromCacheById(id);
+        return shopInfo == null ? Result.fail("店铺不存在！") : Result.ok(shopInfo);
     }
 
     /**

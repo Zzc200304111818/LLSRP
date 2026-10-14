@@ -15,8 +15,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-import static com.zzc.utils.RedisConstants.LOGIN_USER_KEY;
-import static com.zzc.utils.RedisConstants.LOGIN_USER_TTL;
+import static com.zzc.utils.RedisConstants.*;
 
 @Slf4j
 @Component
@@ -42,7 +41,7 @@ public class AuthInterceptor implements HandlerInterceptor {
         String token = request.getHeader("authorization");
         if (token != null) {
             // 2.根据token从redis获取用户信息
-            String userKey = LOGIN_USER_KEY + token;
+            String userKey = LOGIN_USER_PREFIX + token;
             Map<Object, Object> userMap = stringRedisTemplate.opsForHash().entries(userKey);
             if (!userMap.isEmpty()) {
                 // 3.用户存在，将用户信息保存到ThreadLocal

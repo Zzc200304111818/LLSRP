@@ -4,6 +4,7 @@ package com.zzc.controller;
 import com.zzc.dto.Result;
 import com.zzc.entity.ShopType;
 import com.zzc.service.IShopTypeService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -23,12 +24,10 @@ import java.util.List;
 @RequestMapping("/shop-type")
 public class ShopTypeController {
     @Resource
-    private IShopTypeService typeService;
+    private IShopTypeService shopTypeService;
 
     @GetMapping("list")
     public Result queryTypeList() {
-        List<ShopType> typeList = typeService
-                .query().orderByAsc("sort").list();
-        return Result.ok(typeList);
+        return Result.ok(shopTypeService.getTypeListFromCache());
     }
 }
