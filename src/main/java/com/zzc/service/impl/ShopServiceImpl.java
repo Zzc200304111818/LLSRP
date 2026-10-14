@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import javax.annotation.Resource;
 import java.util.concurrent.TimeUnit;
 
+import static com.zzc.utils.RedisConstants.CACHE_NULL_TTL;
 import static com.zzc.utils.RedisConstants.CACHE_SHOP_TTL;
 
 /**
@@ -37,9 +38,15 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
             Shop shop = getById(id);
             if (shop != null) {
                 // 3.写入redis缓存
-                stringRedisTemplate.opsForValue().set(shopKey, JSONUtil.toJsonStr(shop), CACHE_SHOP_TTL, TimeUnit.MINUTES);
+                stringRedisTemplate.opsForValue().set(shopKey, JSONUtil.toJsonStr(shop), CACHE_SHOP_TTL + (long) (Math.random() * 5), TimeUnit.MINUTES);
             }
+            // 4.防止缓存穿透，设置空值
+            stringRedisTemplate.opsForValue().set(shopKey, "", CACHE_NULL_TTL, TimeUnit.MINUTES);
             return shop;
+        }
+        // 5.判断是否是空值缓存
+        if (shopJson.isEmpty()) {
+            return null;
         }
         return JSONUtil.toBean(shopJson, Shop.class);
     }
