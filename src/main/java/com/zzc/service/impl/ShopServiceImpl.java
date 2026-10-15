@@ -6,6 +6,7 @@ import com.zzc.entity.Shop;
 import com.zzc.mapper.ShopMapper;
 import com.zzc.service.IShopService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.zzc.utils.CacheClient;
 import com.zzc.utils.RedisConstants;
 import com.zzc.utils.RedisData;
 import lombok.extern.slf4j.Slf4j;
@@ -19,7 +20,6 @@ import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import static com.zzc.utils.RedisConstants.*;
@@ -41,7 +41,11 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
     @Resource
     private ShopMapper shopMapper;
 
-    private static final ExecutorService executorService = Executors.newFixedThreadPool(10);
+    @Resource
+    private ExecutorService executorService;
+
+    @Resource
+    private CacheClient cacheClient;
 
     @PostConstruct
     public void cacheInit() {
@@ -54,7 +58,7 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
      * @param id
      * @param expireTime
      */
-    public void saveShopToRedis(Long id, Long expireTime) throws InterruptedException {
+    public void saveShopToRedis(Long id, Long expireTime) {
         // 1.查询店铺数据
         Shop shop = shopMapper.selectById(id);
 
@@ -84,7 +88,7 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
                 if (!gotLock) {
                     throw new RuntimeException("服务繁忙，请稍后重试！");
                 }
-                // ✅ 双重检查缓存，拿到锁后再查一次redis
+                // 双重检查缓存，拿到锁后再查一次redis
                 shopJson = stringRedisTemplate.opsForValue().get(shopKey);
                 if (shopJson != null) {
                     if (shopJson.isEmpty()) {
@@ -106,7 +110,7 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
                 Thread.currentThread().interrupt(); // 恢复中断
                 throw new RuntimeException("运行时中断异常", e);
             } finally {
-                // ✅ 只有成功拿到锁，才解锁
+                // 只有成功拿到锁，才解锁
                 if (gotLock) {
                     unLock(lockKey, lockValue);
                 }
@@ -118,7 +122,7 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
             }
         }
         return JSONUtil.toBean(shopJson, Shop.class);*/
-        // 使用缓存逻辑过期
+/*        // 使用缓存逻辑过期
         // 1.查询缓存
         String shopKey = CACHE_SHOP_PREFIX + id;
         String shopJson = stringRedisTemplate.opsForValue().get(shopKey);
@@ -155,7 +159,7 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
                     executorService.submit(() -> {
                         try {
                             saveShopToRedis(id, CACHE_SHOP_TTL);
-                        } catch (InterruptedException e) {
+                        } catch (Exception e) {
                             throw new RuntimeException(e);
                         } finally {
                             // 8.释放锁
@@ -166,7 +170,9 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
                 return shop;
 
             }
-        }
+        }*/
+/*        return cacheClient.getWithCachePenetrate(CACHE_SHOP_PREFIX, id, Shop.class, this::getById, CACHE_SHOP_TTL, TimeUnit.MINUTES);*/
+        return cacheClient.getWithCacheBreakThrough(CACHE_SHOP_PREFIX, id, Shop.class, this::getById);
     }
 
     /**

@@ -1,6 +1,5 @@
 package com.zzc;
 
-import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.zzc.entity.Shop;
