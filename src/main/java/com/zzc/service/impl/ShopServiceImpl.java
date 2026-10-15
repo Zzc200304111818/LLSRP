@@ -1,38 +1,76 @@
 package com.zzc.service.impl;
 
+import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.zzc.entity.Shop;
 import com.zzc.mapper.ShopMapper;
 import com.zzc.service.IShopService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.zzc.utils.RedisConstants;
+import com.zzc.utils.RedisData;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.stereotype.Service;
 
+import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
+import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.UUID;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import static com.zzc.utils.RedisConstants.*;
 
 /**
  * <p>
- *  服务实现类
+ * 服务实现类
  * </p>
  *
  * @author 成哥
  * @since 2021-12-22
  */
+@Slf4j
 @Service
 public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IShopService {
     @Resource
     private StringRedisTemplate stringRedisTemplate;
 
+    @Resource
+    private ShopMapper shopMapper;
+
+    private static final ExecutorService executorService = Executors.newFixedThreadPool(10);
+
+    @PostConstruct
+    public void cacheInit() {
+
+    }
+
+    /**
+     * 缓存重建
+     *
+     * @param id
+     * @param expireTime
+     */
+    public void saveShopToRedis(Long id, Long expireTime) throws InterruptedException {
+        // 1.查询店铺数据
+        Shop shop = shopMapper.selectById(id);
+
+        // 2.封装数据到RedisData
+        RedisData redisData = new RedisData();
+        redisData.setData(shop);
+        redisData.setExpireTime(LocalDateTime.now().plusSeconds(expireTime));
+
+        // 3.写入redis
+        String shopKey = CACHE_SHOP_PREFIX + id;
+        stringRedisTemplate.opsForValue().set(shopKey, JSONUtil.toJsonStr(redisData));
+    }
+
     @Override
     public Shop getFromCacheById(Long id) {
-        // 1.根据id查redis缓存
+/*        // 1.根据id查redis缓存
         String shopKey = RedisConstants.CACHE_SHOP_PREFIX + id;
         String shopJson = stringRedisTemplate.opsForValue().get(shopKey);
         if (shopJson == null) {
@@ -79,7 +117,56 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
                 return null;
             }
         }
-        return JSONUtil.toBean(shopJson, Shop.class);
+        return JSONUtil.toBean(shopJson, Shop.class);*/
+        // 使用缓存逻辑过期
+        // 1.查询缓存
+        String shopKey = CACHE_SHOP_PREFIX + id;
+        String shopJson = stringRedisTemplate.opsForValue().get(shopKey);
+        if (shopJson == null) {
+            // 2.缓存为空，返回
+            return null;
+        } else {
+            // 3.非空，判断是否过期
+            RedisData redisData = JSONUtil.toBean(shopJson, RedisData.class);
+            LocalDateTime expireTime = redisData.getExpireTime();
+            JSONObject data = (JSONObject) redisData.getData();
+            Shop shop = JSONUtil.toBean(data, Shop.class);
+            if (expireTime.isAfter(LocalDateTime.now())) {
+                // 4.缓存未过期，直接返回
+                return shop;
+            } else {
+                // 5.缓存已过期，使用setNX互斥锁进行缓存重建
+                String lockKey = LOCK_SHOP_PREFIX + id;
+                String lockValue = UUID.randomUUID() + "-" + Thread.currentThread().getId();
+                boolean isLock = false;
+                isLock = Boolean.TRUE.equals(stringRedisTemplate.opsForValue().setIfAbsent(lockKey, lockValue, LOCK_SHOP_TTL, TimeUnit.SECONDS));
+                if (isLock) {
+                    // 6.二次检查：重新读取缓存，看看是否已经被其他线程重建
+                    String newShopJson = stringRedisTemplate.opsForValue().get(shopKey);
+                    if (newShopJson != null) {
+                        RedisData newRedisData = JSONUtil.toBean(newShopJson, RedisData.class);
+                        if (newRedisData.getExpireTime().isAfter(LocalDateTime.now())) {
+                            // 缓存已被其他线程重建，直接返回新数据
+                            JSONObject newData = (JSONObject) newRedisData.getData();
+                            return JSONUtil.toBean(newData, Shop.class);
+                        }
+                    }
+                    // 7.获取锁成功，异步线程重建缓存
+                    executorService.submit(() -> {
+                        try {
+                            saveShopToRedis(id, CACHE_SHOP_TTL);
+                        } catch (InterruptedException e) {
+                            throw new RuntimeException(e);
+                        } finally {
+                            // 8.释放锁
+                            unLock(lockKey, lockValue);
+                        }
+                    });
+                }
+                return shop;
+
+            }
+        }
     }
 
     /**
@@ -102,12 +189,12 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
      */
     private void unLock(String lockKey, String lockValue) {
         String luaScript = """
-            if redis.call('get', KEYS[1]) == ARGV[1] then
-                return redis.call('del', KEYS[1])
-            else
-                return 0
-            end
-            """;
+                if redis.call('get', KEYS[1]) == ARGV[1] then
+                    return redis.call('del', KEYS[1])
+                else
+                    return 0
+                end
+                """;
         stringRedisTemplate.execute(
                 new DefaultRedisScript<>(luaScript, Long.class),
                 Collections.singletonList(lockKey),
