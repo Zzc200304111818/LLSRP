@@ -1,16 +1,14 @@
 package com.zzc;
 
-import cn.hutool.json.JSONObject;
-import cn.hutool.json.JSONUtil;
-import com.zzc.entity.Shop;
 import com.zzc.service.impl.ShopServiceImpl;
-import com.zzc.utils.RedisConstants;
-import com.zzc.utils.RedisData;
+import com.zzc.utils.RedisIDGenerator;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.redis.core.StringRedisTemplate;
 
 import javax.annotation.Resource;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
 
 @SpringBootTest
 public class LLSRPApplicationTest {
@@ -20,13 +18,27 @@ public class LLSRPApplicationTest {
     @Resource
     private StringRedisTemplate stringRedisTemplate;
 
+    @Resource
+    private RedisIDGenerator redisIDGenerator;
+
+    @Resource
+    ExecutorService executorService;
+
     @Test
     public void test() throws InterruptedException {
-        shopServiceImpl.saveShopToRedis(1L, 10L);
-        String s = stringRedisTemplate.opsForValue().get(RedisConstants.CACHE_SHOP_PREFIX + 1);
-        RedisData redisData = JSONUtil.toBean(s, RedisData.class);
-        JSONObject data = (JSONObject) redisData.getData();
-        Shop shop = JSONUtil.toBean(data, Shop.class);
-        System.out.println(shop.getName());
+        long begin = System.currentTimeMillis();
+        CountDownLatch countDownLatch = new CountDownLatch(10);
+        for (int i = 0; i < 10; i++) {
+            executorService.submit(() -> {
+                for (int j = 0; j < 1000; j++) {
+                    long id = redisIDGenerator.nextID("order:");
+                    System.out.println(id);
+                }
+                countDownLatch.countDown();
+            });
+        }
+        countDownLatch.await();
+        long end = System.currentTimeMillis();
+        System.out.println("耗时：" + (end - begin));
     }
 }
