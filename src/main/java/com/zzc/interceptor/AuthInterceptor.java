@@ -38,7 +38,7 @@ public class AuthInterceptor implements HandlerInterceptor {
             }
         }*/
         // 1.获取token
-        String token = request.getHeader("authorization");
+        String token = request.getHeader("Authorization");
         if (token != null) {
             // 2.根据token从redis获取用户信息
             String userKey = LOGIN_USER_PREFIX + token;

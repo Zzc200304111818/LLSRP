@@ -1,15 +1,18 @@
 package com.zzc.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.zzc.entity.SeckillVoucher;
 import com.zzc.entity.VoucherOrder;
 import com.zzc.mapper.SeckillVoucherMapper;
 import com.zzc.mapper.VoucherOrderMapper;
+import com.zzc.service.ISeckillVoucherService;
 import com.zzc.service.IVoucherOrderService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.zzc.utils.RedisIdGenerator;
 import com.zzc.utils.UserHolder;
+import org.springframework.aop.framework.AopContext;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -37,13 +40,12 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
     private VoucherOrderMapper voucherOrderMapper;
 
     @Override
-    @Transactional
     public Long seckillVoucher(Long voucherId) {
         // 1.查询优惠券
         SeckillVoucher seckillVoucher = seckillVoucherMapper.selectById(voucherId);
         // 2.判断优惠券是否存在
         if (seckillVoucher == null) {
-            return null;
+            throw new RuntimeException("优惠券不存在！");
         }
         // 3.判断是否在秒杀期间
         LocalDateTime beginTime = seckillVoucher.getBeginTime();
@@ -60,22 +62,41 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
         if (stock == null || stock < 1) {
             throw new RuntimeException("库存不足！");
         }
-        // 5.扣减库存（原子更新，判断和更新放在同一条Sql）
+        Long userId = UserHolder.getUser().getId();
+        synchronized (userId.toString().intern()) {
+            return ((IVoucherOrderService) AopContext.currentProxy()).doSeckill(voucherId, userId);
+        }
+    }
+
+    @Transactional
+    @Override
+    public Long doSeckill(Long voucherId, Long userId) {
+        // 5.查重逻辑（防止用户隔几秒重复点击）
+        int count = voucherOrderMapper.selectCount(new LambdaQueryWrapper<VoucherOrder>()
+                .eq(VoucherOrder::getUserId, userId)
+                .eq(VoucherOrder::getVoucherId, voucherId));
+        if (count > 0) {
+            throw new RuntimeException("您已经购买过该优惠券！");
+        }
+        // 6.扣减库存（原子更新，判断和更新放在同一条Sql）
         LambdaUpdateWrapper<SeckillVoucher> updateWrapper = new LambdaUpdateWrapper<SeckillVoucher>()
                 .setSql("stock = stock - 1")
                 .eq(SeckillVoucher::getVoucherId, voucherId)
                 .ge(SeckillVoucher::getStock, 1);
-        seckillVoucherMapper.update(null, updateWrapper);
-        // 6.创建订单
+        int row = seckillVoucherMapper.update(null, updateWrapper);
+        if (row == 0) {
+            throw new RuntimeException("库存不足！");
+        }
+        // 7.创建订单
         VoucherOrder voucherOrder = new VoucherOrder();
         // 订单id
         Long orderId = redisIdGenerator.nextId("order:");
         voucherOrder.setId(orderId);
         // 用户id
-        voucherOrder.setUserId(UserHolder.getUser().getId());
+        voucherOrder.setUserId(userId);
         // 代金券id
         voucherOrder.setVoucherId(voucherId);
-        // 7.插入订单
+        // 8.插入订单
         voucherOrderMapper.insert(voucherOrder);
         return orderId;
     }
