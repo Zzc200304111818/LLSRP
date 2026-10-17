@@ -9,13 +9,13 @@ import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 
 @Component
-public class RedisIDGenerator {
+public class RedisIdGenerator {
     private static final long BEGIN_TIMESTAMP = 1767225600L; // 以UTC 2026/1/1 00:00:00 作为初始时间戳（秒）
 
     @Resource
     private StringRedisTemplate stringRedisTemplate;
 
-    public long nextID(String keyPrefix) {
+    public long nextId(String keyPrefix) {
         // 生成当前时间戳
         LocalDateTime now = LocalDateTime.now();
         long timestamp = now.toEpochSecond(ZoneOffset.UTC) - BEGIN_TIMESTAMP;

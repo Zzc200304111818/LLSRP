@@ -75,7 +75,7 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
 
     @Override
     public Shop getFromCacheById(Long id) {
-/*        // 1.根据id查redis缓存
+        // 1.根据id查redis缓存
         String shopKey = RedisConstants.CACHE_SHOP_PREFIX + id;
         String shopJson = stringRedisTemplate.opsForValue().get(shopKey);
         if (shopJson == null) {
@@ -122,7 +122,7 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
                 return null;
             }
         }
-        return JSONUtil.toBean(shopJson, Shop.class);*/
+        return JSONUtil.toBean(shopJson, Shop.class);
 /*        // 使用缓存逻辑过期
         // 1.查询缓存
         String shopKey = CACHE_SHOP_PREFIX + id;
@@ -173,7 +173,7 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
             }
         }*/
 /*        return cacheClient.getWithCachePenetrate(CACHE_SHOP_PREFIX, id, Shop.class, this::getById, CACHE_SHOP_TTL, TimeUnit.MINUTES);*/
-        return cacheClient.getWithCacheBreakThrough(CACHE_SHOP_PREFIX, id, Shop.class, this::getById);
+/*        return cacheClient.getWithCacheBreakThrough(CACHE_SHOP_PREFIX, id, Shop.class, this::getById);*/
     }
 
     /**
