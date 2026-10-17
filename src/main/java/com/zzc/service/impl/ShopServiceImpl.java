@@ -172,8 +172,8 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
 
             }
         }*/
-/*        return cacheClient.getWithCachePenetrate(CACHE_SHOP_PREFIX, id, Shop.class, this::getById, CACHE_SHOP_TTL, TimeUnit.MINUTES);*/
-/*        return cacheClient.getWithCacheBreakThrough(CACHE_SHOP_PREFIX, id, Shop.class, this::getById);*/
+        /*        return cacheClient.getWithCachePenetrate(CACHE_SHOP_PREFIX, id, Shop.class, this::getById, CACHE_SHOP_TTL, TimeUnit.MINUTES);*/
+        /*        return cacheClient.getWithCacheBreakThrough(CACHE_SHOP_PREFIX, id, Shop.class, this::getById);*/
     }
 
     /**
@@ -195,13 +195,12 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
      * Lua原子解锁，判断锁归属，防止误删别人锁
      */
     private void unLock(String lockKey, String lockValue) {
-        String luaScript = """
-                if redis.call('get', KEYS[1]) == ARGV[1] then
-                    return redis.call('del', KEYS[1])
-                else
-                    return 0
-                end
-                """;
+        String luaScript =
+                "if redis.call('get', KEYS[1]) == ARGV[1] then\n" +
+                        "    return redis.call('del', KEYS[1])\n" +
+                        "else\n" +
+                        "    return 0\n" +
+                        "end";
         stringRedisTemplate.execute(
                 new DefaultRedisScript<>(luaScript, Long.class),
                 Collections.singletonList(lockKey),

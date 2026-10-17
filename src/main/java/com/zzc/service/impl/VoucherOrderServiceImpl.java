@@ -1,5 +1,7 @@
 package com.zzc.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.zzc.entity.SeckillVoucher;
 import com.zzc.entity.VoucherOrder;
 import com.zzc.mapper.SeckillVoucherMapper;
@@ -58,9 +60,12 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
         if (stock == null || stock < 1) {
             throw new RuntimeException("库存不足！");
         }
-        // 5.扣减库存
-        seckillVoucher.setStock(stock - 1);
-        seckillVoucherMapper.updateById(seckillVoucher);
+        // 5.扣减库存（原子更新，判断和更新放在同一条Sql）
+        LambdaUpdateWrapper<SeckillVoucher> updateWrapper = new LambdaUpdateWrapper<SeckillVoucher>()
+                .setSql("stock = stock - 1")
+                .eq(SeckillVoucher::getVoucherId, voucherId)
+                .ge(SeckillVoucher::getStock, 1);
+        seckillVoucherMapper.update(null, updateWrapper);
         // 6.创建订单
         VoucherOrder voucherOrder = new VoucherOrder();
         // 订单id

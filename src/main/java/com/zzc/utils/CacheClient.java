@@ -51,13 +51,12 @@ public class CacheClient {
      * Lua原子解锁，判断锁归属，防止误删别人锁
      */
     private void unLock(String lockKey, String lockValue) {
-        String luaScript = """
-                if redis.call('get', KEYS[1]) == ARGV[1] then
-                    return redis.call('del', KEYS[1])
-                else
-                    return 0
-                end
-                """;
+        String luaScript =
+                "if redis.call('get', KEYS[1]) == ARGV[1] then\n" +
+                        "    return redis.call('del', KEYS[1])\n" +
+                        "else\n" +
+                        "    return 0\n" +
+                        "end";
         stringRedisTemplate.execute(new DefaultRedisScript<>(luaScript, Long.class), Collections.singletonList(lockKey), lockValue);
     }
 
@@ -127,13 +126,14 @@ public class CacheClient {
 
     /**
      * 使用互斥锁解决缓存击穿问题，通过ID查询热点数据
+     *
      * @param prefix
      * @param id
      * @param type
      * @param function
-     * @return
      * @param <R>
      * @param <ID>
+     * @return
      */
     public <R, ID> R getWithCacheBreakThrough(String prefix, ID id, Class<R> type, Function<ID, R> function) {
         // 使用缓存逻辑过期
