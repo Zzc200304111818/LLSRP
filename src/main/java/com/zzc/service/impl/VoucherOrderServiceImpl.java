@@ -11,14 +11,18 @@ import com.zzc.service.ISeckillVoucherService;
 import com.zzc.service.IVoucherOrderService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.zzc.utils.RedisIdGenerator;
+import com.zzc.utils.RedisLockUtils;
 import com.zzc.utils.UserHolder;
 import org.springframework.aop.framework.AopContext;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
 import java.time.LocalDateTime;
+import java.util.UUID;
+
 
 /**
  * <p>
@@ -30,6 +34,8 @@ import java.time.LocalDateTime;
  */
 @Service
 public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, VoucherOrder> implements IVoucherOrderService {
+    private static final String LOCK_PREFIX = "lock:";
+
     @Resource
     private SeckillVoucherMapper seckillVoucherMapper;
 
@@ -38,6 +44,10 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
 
     @Resource
     private VoucherOrderMapper voucherOrderMapper;
+
+    @Resource
+    private RedisLockUtils redisLockUtils;
+    private StringRedisTemplate stringRedisTemplate;
 
     @Override
     public Long seckillVoucher(Long voucherId) {
@@ -63,8 +73,24 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
             throw new RuntimeException("库存不足！");
         }
         Long userId = UserHolder.getUser().getId();
+/*        // 单机本地锁可保证并发安全
         synchronized (userId.toString().intern()) {
             return ((IVoucherOrderService) AopContext.currentProxy()).doSeckill(voucherId, userId);
+        }*/
+        String lockKey = LOCK_PREFIX + userId;
+        String value = UUID.randomUUID() + "-" + Thread.currentThread().getId();
+        // 加分布式锁
+        boolean isLock = redisLockUtils.tryLock(lockKey, value, 1200);
+        if (!isLock) {
+            // 直接返回
+            throw new RuntimeException("不允许重复下单！");
+        }
+        try {
+            return ((IVoucherOrderService) AopContext.currentProxy()).doSeckill(voucherId, userId);
+        } catch (RuntimeException e) {
+            throw new RuntimeException(e);
+        } finally {
+            redisLockUtils.unlock(lockKey, value);
         }
     }
 

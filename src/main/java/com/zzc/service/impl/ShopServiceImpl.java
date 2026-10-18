@@ -1,6 +1,5 @@
 package com.zzc.service.impl;
 
-import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.zzc.entity.Shop;
 import com.zzc.mapper.ShopMapper;
@@ -113,7 +112,7 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
             } finally {
                 // 只有成功拿到锁，才解锁
                 if (gotLock) {
-                    unLock(lockKey, lockValue);
+                    unlock(lockKey, lockValue);
                 }
             }
         } else {
@@ -164,7 +163,7 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
                             throw new RuntimeException(e);
                         } finally {
                             // 8.释放锁
-                            unLock(lockKey, lockValue);
+                            unlock(lockKey, lockValue);
                         }
                     });
                 }
@@ -194,7 +193,7 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
     /**
      * Lua原子解锁，判断锁归属，防止误删别人锁
      */
-    private void unLock(String lockKey, String lockValue) {
+    private void unlock(String lockKey, String lockValue) {
         String luaScript =
                 "if redis.call('get', KEYS[1]) == ARGV[1] then\n" +
                         "    return redis.call('del', KEYS[1])\n" +

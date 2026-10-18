@@ -3,7 +3,6 @@ package com.zzc.utils;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.stereotype.Component;
@@ -22,7 +21,7 @@ import static com.zzc.utils.RedisConstants.*;
 @Component
 public class CacheClient {
 
-    private static final String LOCK_PREFIX = "LOCK:";
+    private static final String LOCK_PREFIX = "lock:";
     private static final Long LOCK_TTL = 10L;
     private static final Long DATA_TTL = 30L;
 
@@ -50,7 +49,7 @@ public class CacheClient {
     /**
      * Lua原子解锁，判断锁归属，防止误删别人锁
      */
-    private void unLock(String lockKey, String lockValue) {
+    private void unlock(String lockKey, String lockValue) {
         String luaScript =
                 "if redis.call('get', KEYS[1]) == ARGV[1] then\n" +
                         "    return redis.call('del', KEYS[1])\n" +
@@ -180,7 +179,7 @@ public class CacheClient {
                             throw new RuntimeException(e);
                         } finally {
                             // 8.释放锁
-                            unLock(lockKey, lockValue);
+                            unlock(lockKey, lockValue);
                         }
                     });
                 }
