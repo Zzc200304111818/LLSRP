@@ -13,6 +13,8 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.zzc.utils.RedisIdGenerator;
 import com.zzc.utils.RedisLockUtils;
 import com.zzc.utils.UserHolder;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
 import org.springframework.aop.framework.AopContext;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -47,7 +49,9 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
 
     @Resource
     private RedisLockUtils redisLockUtils;
-    private StringRedisTemplate stringRedisTemplate;
+
+    @Resource
+    private RedissonClient redissonClient;
 
     @Override
     public Long seckillVoucher(Long voucherId) {
@@ -79,8 +83,10 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
         }*/
         String lockKey = LOCK_PREFIX + userId;
         String value = UUID.randomUUID() + "-" + Thread.currentThread().getId();
-        // 加分布式锁
-        boolean isLock = redisLockUtils.tryLock(lockKey, value, 1200);
+        // TODO 加分布式锁（Redisson改造，无等待时间）
+//        boolean isLock = redisLockUtils.tryLock(lockKey, value, 1200);
+        RLock lock = redissonClient.getLock(lockKey);
+        boolean isLock = lock.tryLock();
         if (!isLock) {
             // 直接返回
             throw new RuntimeException("不允许重复下单！");
@@ -90,7 +96,8 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
         } catch (RuntimeException e) {
             throw new RuntimeException(e);
         } finally {
-            redisLockUtils.unlock(lockKey, value);
+//            redisLockUtils.unlock(lockKey, value);
+            lock.unlock();
         }
     }
 
